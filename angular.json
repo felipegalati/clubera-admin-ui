@@ -59,7 +59,8 @@
               "buildTarget": "clubera-admin:build:production"
             },
             "development": {
-              "buildTarget": "clubera-admin:build:development"
+              "buildTarget": "clubera-admin:build:development",
+              "port": 4500
             }
           },
           "defaultConfiguration": "development"
