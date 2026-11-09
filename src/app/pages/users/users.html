@@ -1,3 +1,255 @@
-<div class="container-fluid">
-    Contéudo usuários
+<main class="container-fluid py-3">
+  <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-0">Usuários</h1>
+      <p class="text-body-secondary small mb-0">Pessoas cadastradas no sistema principal</p>
+    </div>
+    <span class="badge text-bg-secondary" aria-live="polite">
+      {{ filteredUsers().length }} de {{ users().length }} usuários
+    </span>
+  </header>
+
+  <div class="card shadow-sm">
+    <div class="card-header py-2">
+      <label for="user-search" class="visually-hidden">Pesquisar usuários</label>
+      <input
+        id="user-search"
+        type="search"
+        class="form-control form-control-sm"
+        placeholder="Pesquisar por nome, e-mail, CPF ou telefone"
+        autocomplete="off"
+        [formControl]="searchControl"
+      />
+    </div>
+
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Lista de usuários">
+      <table class="table table-hover align-middle table-users mb-0">
+        <caption class="visually-hidden">
+          Usuários cadastrados com nome, e-mail e status. Selecione o nome para ver mais detalhes.
+        </caption>
+        <colgroup>
+          <col class="col-name" />
+          <col />
+          <col class="col-status" />
+          <col class="col-actions" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">Nome</th>
+            <th scope="col">E-mail</th>
+            <th scope="col" class="text-center">Status</th>
+            <th scope="col" class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of pagedUsers(); track user.id) {
+            <tr [class.row-blocked]="user.status === 'blocked'">
+              <th scope="row">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="avatar" aria-hidden="true">{{ initials(user.name) }}</span>
+                  <button
+                    type="button"
+                    class="btn btn-link btn-sm p-0 name-link"
+                    aria-haspopup="dialog"
+                    [attr.aria-label]="'Ver detalhes de ' + user.name"
+                    [attr.title]="user.name"
+                    (click)="openDetails(user.id)"
+                  >
+                    {{ user.name }}
+                  </button>
+                </div>
+              </th>
+              <td class="text-truncate" [attr.title]="user.email">{{ user.email }}</td>
+              <td class="text-center">
+                @if (user.status === 'active') {
+                  <span class="badge text-bg-success status-badge">Ativo</span>
+                } @else {
+                  <span class="badge text-bg-danger status-badge">Bloqueado</span>
+                }
+              </td>
+              <td class="text-end">
+                @if (user.status === 'active') {
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger btn-sm action-btn"
+                    [attr.aria-label]="'Bloquear ' + user.name"
+                    (click)="toggleBlock(user.id)"
+                  >
+                    Bloquear
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm action-btn"
+                    [attr.aria-label]="'Desbloquear ' + user.name"
+                    (click)="toggleBlock(user.id)"
+                  >
+                    Desbloquear
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="text-center text-body-secondary py-4">
+                Nenhum usuário encontrado. Tente outro nome, e-mail, CPF ou telefone.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (filteredUsers().length > 0) {
+      <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 small">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+          <span class="text-body-secondary">
+            Mostrando {{ range().start }}–{{ range().end }} de {{ filteredUsers().length }}
+          </span>
+          <div class="d-flex align-items-center gap-2">
+            <label for="page-size" class="text-body-secondary mb-0">Itens por página</label>
+            <select id="page-size" class="form-select form-select-sm w-auto" [formControl]="pageSizeControl">
+              @for (size of pageSizeOptions; track size) {
+                <option [ngValue]="size">{{ size }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <nav aria-label="Paginação da lista de usuários">
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item" [class.disabled]="page() === 1">
+              <button type="button" class="page-link" [disabled]="page() === 1" (click)="goToPage(page() - 1)">
+                Anterior
+              </button>
+            </li>
+
+            @for (item of pageItems(); track $index) {
+              @if (item === null) {
+                <li class="page-item disabled"><span class="page-link" aria-hidden="true">…</span></li>
+              } @else {
+                <li class="page-item" [class.active]="item === page()">
+                  <button
+                    type="button"
+                    class="page-link"
+                    [attr.aria-current]="item === page() ? 'page' : null"
+                    [attr.aria-label]="'Página ' + item"
+                    (click)="goToPage(item)"
+                  >
+                    {{ item }}
+                  </button>
+                </li>
+              }
+            }
+
+            <li class="page-item" [class.disabled]="page() === totalPages()">
+              <button
+                type="button"
+                class="page-link"
+                [disabled]="page() === totalPages()"
+                (click)="goToPage(page() + 1)"
+              >
+                Próxima
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    }
+  </div>
+</main>
+
+<div
+  class="toast-container position-fixed top-0 end-0 p-3"
+  role="status"
+  aria-live="polite"
+  aria-atomic="false"
+>
+  @for (toast of toasts(); track toast.id) {
+    <div
+      class="toast show align-items-center border-0"
+      [class.text-bg-danger]="toast.type === 'blocked'"
+      [class.text-bg-success]="toast.type === 'activated'"
+    >
+      <div class="d-flex">
+        <div class="toast-body">{{ toast.message }}</div>
+        <button
+          type="button"
+          class="btn-close btn-close-white me-2 m-auto"
+          aria-label="Fechar aviso"
+          (click)="dismissToast(toast.id)"
+        ></button>
+      </div>
+    </div>
+  }
 </div>
+
+<dialog
+  #detailsDialog
+  class="details-dialog"
+  aria-labelledby="user-details-title"
+  (click)="onDialogClick($event)"
+  (close)="onDialogClosed()"
+>
+  @let user = selectedUser();
+  <div class="card shadow">
+    <div class="card-header d-flex align-items-center justify-content-between gap-2">
+      <h2 id="user-details-title" class="h6 mb-0">{{ user?.name }}</h2>
+      <button type="button" class="btn-close" aria-label="Fechar detalhes" (click)="closeDetails()"></button>
+    </div>
+
+    <div class="card-body">
+      <dl class="row mb-0 small">
+        <dt class="col-5 fw-normal text-body-secondary">E-mail</dt>
+        <dd class="col-7 text-break">{{ user?.email }}</dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">CPF</dt>
+        <dd class="col-7 d-flex align-items-center gap-2">
+          <span>{{ cpfDisplay() }}</span>
+          <button
+            type="button"
+            class="btn btn-link btn-sm p-0 text-body-secondary lh-1"
+            [attr.aria-label]="showCpf() ? 'Ocultar CPF' : 'Mostrar CPF'"
+            [attr.aria-pressed]="showCpf()"
+            (click)="toggleCpf()"
+          >
+            @if (showCpf()) {
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/>
+                <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/>
+                <path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/>
+              </svg>
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.88 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.88 11.332 10.12 12.5 8 12.5s-3.88-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+              </svg>
+            }
+          </button>
+        </dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">Telefone</dt>
+        <dd class="col-7">{{ user?.phone }}</dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">Nascimento</dt>
+        <dd class="col-7">{{ user?.birthDate | date: 'dd/MM/yyyy' }}</dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">Cadastro no sistema</dt>
+        <dd class="col-7">{{ user?.createdAt | date: "dd/MM/yyyy 'às' HH:mm" }}</dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">Status</dt>
+        <dd class="col-7 mb-0">
+          @if (user?.status === 'blocked') {
+            <span class="badge text-bg-danger">Bloqueado</span>
+          } @else {
+            <span class="badge text-bg-success">Ativo</span>
+          }
+        </dd>
+      </dl>
+    </div>
+
+    <div class="card-footer text-end">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="closeDetails()">Fechar</button>
+    </div>
+  </div>
+</dialog>
